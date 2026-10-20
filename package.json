@@ -1,5 +1,5 @@
 {
-	"name": "@3sixty/wallet",
+	"name": "3sixty-wallet",
 	"version": "0.0.0",
 	"description": "Monorepo for wallet connector libraries and a wallet command-line application",
 	"repository": {
