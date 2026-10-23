@@ -1,6 +1,6 @@
 {
 	"name": "@3sixty/wallet-models",
-	"version": "0.20.0-next.0",
+	"version": "0.20.0-next.1",
 	"description": "Defines shared wallet and faucet connector interfaces together with factories for resolving connector implementations",
 	"repository": {
 		"type": "git",
