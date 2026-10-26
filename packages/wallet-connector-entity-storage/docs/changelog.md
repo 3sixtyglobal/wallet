@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.20.0-next.2](https://github.com/3sixtyglobal/wallet/compare/wallet-connector-entity-storage-v0.20.0-next.1...wallet-connector-entity-storage-v0.20.0-next.2) (2026-10-26)
+
+
+### Features
+
+* release to next [skip ci] ([#2](https://github.com/3sixtyglobal/wallet/issues/2)) ([c723259](https://github.com/3sixtyglobal/wallet/commit/c72325914798aee4df8f9a803551538fada2562f))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @3sixty/wallet-models bumped from 0.20.0-next.1 to 0.20.0-next.2
+
 ## [0.20.0-next.1](https://github.com/3sixtyglobal/wallet/compare/wallet-connector-entity-storage-v0.20.0-next.0...wallet-connector-entity-storage-v0.20.0-next.1) (2026-10-23)
 
 
