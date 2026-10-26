@@ -1,6 +1,6 @@
 {
 	"name": "@3sixty/wallet-connector-iota",
-	"version": "0.20.0-next.1",
+	"version": "0.20.0-next.2",
 	"description": "Implements wallet and faucet connectors for IOTA networks, including balance checks, transfers, and funding flows",
 	"repository": {
 		"type": "git",
@@ -37,7 +37,7 @@
 		"@3sixty/dlt-iota": "next",
 		"@3sixty/nameof": "next",
 		"@3sixty/vault-models": "next",
-		"@3sixty/wallet-models": "0.20.0-next.1"
+		"@3sixty/wallet-models": "0.20.0-next.2"
 	},
 	"devDependencies": {
 		"@3sixty/crypto": "next",
