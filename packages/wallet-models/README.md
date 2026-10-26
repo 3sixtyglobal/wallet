@@ -1,11 +1,11 @@
-# TWIN Wallet Models
+# 3Sixty Wallet Models
 
 This package defines shared wallet and faucet connector interfaces together with factories for resolving connector implementations. It provides a consistent contract layer so downstream libraries and tools can integrate wallet capabilities without coupling to a specific connector implementation.
 
 ## Installation
 
 ```shell
-npm install @twin.org/wallet-models
+npm install @3sixty/wallet-models
 ```
 
 ## Examples
@@ -19,3 +19,7 @@ Detailed reference documentation for the API can be found in [docs/reference/ind
 ## Changelog
 
 The changes between each version can be found in [docs/changelog.md](docs/changelog.md)
+
+## Origin
+
+This package is derived from the original [iotaledger/twin-wallet](https://github.com/iotaledger/twin-wallet/tree/next/packages/wallet-models) repository.

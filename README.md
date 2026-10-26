@@ -1,4 +1,4 @@
-# TWIN Wallet
+# 3Sixty Wallet
 
 This repository provides a focused set of wallet building blocks and a companion command-line tool for practical operational workflows. The libraries define shared connector contracts, add storage-backed implementations for local and test scenarios, and provide network-backed implementations for interaction with IOTA infrastructure.
 
@@ -17,3 +17,7 @@ Together, these components are designed to keep wallet integration consistent ac
 ## Contributing
 
 To contribute to this package see the guidelines for building and publishing in [CONTRIBUTING](./CONTRIBUTING.md)
+
+## Origin
+
+This repository is derived from the original [iotaledger/twin-wallet](https://github.com/iotaledger/twin-wallet) repository.

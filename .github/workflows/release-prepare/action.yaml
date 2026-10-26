@@ -20,6 +20,10 @@ inputs:
   release_token:
     description: 'GitHub token for checkout and PR approval'
     required: true
+  force_release:
+    description: 'Add an empty feat commit so a next release publishes even without releasable commits'
+    required: false
+    default: 'false'
 
 outputs:
   pr_number:
@@ -84,53 +88,69 @@ runs:
       with:
         node-version: 24
 
-    # Install and prepare the tooling release-please depends on.
+    # Setup pnpm after node, the runners have no system node for its installer to use.
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v6
+      with:
+        cache: true
+
+    # Install and prepare the tooling release-please depends on, with retry to
+    # handle transient registry failures.
     - name: Install dependencies
       shell: bash
       run: |
         for i in {1..5}; do
-          npm ci --no-audit --no-fund && break || {
+          pnpm install --frozen-lockfile && break || {
             if [ $i -eq 5 ]; then
-              echo "npm ci failed after 5 attempts"
+              echo "pnpm install failed after 5 attempts"
               exit 1
             fi
-            echo "npm ci failed, retrying in 30 seconds (attempt $i/3)..."
+            echo "pnpm install failed, retrying in 30 seconds (attempt $i/5)..."
             sleep 30
           }
         done
 
     - name: Patch release-please prerelease versioning strategy
       shell: bash
-      run: npx patch-package --patch-dir release
+      run: pnpm dlx patch-package --patch-dir release
 
     - name: Import GPG key
       shell: bash
       run: |
         echo "${{ inputs.gpg_private_key }}" | base64 --decode | gpg --import
-        echo "TWIN_GPG_KEY_ID=${{ inputs.gpg_key_id }}" >> "$GITHUB_ENV"
+        echo "ORG_GPG_KEY_ID=${{ inputs.gpg_key_id }}" >> "$GITHUB_ENV"
 
     - name: Configure Git
       shell: bash
       run: |
-        git config --global user.email "github@twindev.org"
-        git config --global user.name "TWIN GitHub Bot"
-        git config --global user.signingkey "$TWIN_GPG_KEY_ID"
+        git config --global user.email "$ORG_GPG_EMAIL"
+        git config --global user.name "$ORG_GPG_NAME"
+        git config --global user.signingkey "$ORG_GPG_KEY_ID"
         git config --global commit.gpgsign true
         git config --global tag.gpgsign true
 
-    # Production releases may need an empty conventional commit so release-please
-    # sees a releasable commit since the last release. Push via a short-lived
-    # branch + auto-merged PR to satisfy the "Changes must be made through a
-    # pull request" branch protection rule on main.
+    # Production releases, and forced next releases, need an empty conventional
+    # commit so release-please sees a releasable commit since the last release.
+    # An empty commit applies to every package. Push via a short-lived branch +
+    # auto-merged PR to satisfy the "Changes must be made through a pull
+    # request" branch protection rule.
     - name: Force release via PR
-      if: ${{ inputs.branch == 'main' }}
+      if: ${{ inputs.branch == 'main' || inputs.force_release == 'true' }}
       shell: bash
       run: |
-        PROD_VERSION=$(node -e "
-          const m = JSON.parse(require('fs').readFileSync('release/release-please-manifest.prod.json', 'utf8'));
-          console.log(Object.values(m)[0]);
-        ")
-        echo "Release-As version: $PROD_VERSION"
+        BRANCH="${{ inputs.branch }}"
+        if [ "$BRANCH" = "main" ]; then
+          PROD_VERSION=$(node -e "
+            const m = JSON.parse(require('fs').readFileSync('release/release-please-manifest.prod.json', 'utf8'));
+            console.log(Object.values(m)[0]);
+          ")
+          echo "Release-As version: $PROD_VERSION"
+          FORCE_TITLE="feat: release to production"
+          FORCE_TRAILER="Release-As: $PROD_VERSION"
+        else
+          FORCE_TITLE="feat: release to next"
+          FORCE_TRAILER="Forced release of all packages."
+        fi
 
         FORCE_BRANCH="release/force-commit-$(date +%s)"
         git checkout -b "$FORCE_BRANCH"
@@ -140,14 +160,14 @@ runs:
         # this PR starts no release job: process-workspaces requires the
         # 'autorelease: pending' label, which only the release PR has. The
         # Release-As trailer stays in the body, so release-please still reads it.
-        git commit -S --allow-empty -m "feat: release to production [skip ci]" -m "Release-As: $PROD_VERSION"
+        git commit -S --allow-empty -m "$FORCE_TITLE [skip ci]" -m "$FORCE_TRAILER"
         git push origin "$FORCE_BRANCH"
-        git checkout main
+        git checkout "$BRANCH"
 
         PR_URL=$(gh pr create \
-          --title "feat: release to production" \
-          --body "Automated force commit to trigger release-please for this production release." \
-          --base main \
+          --title "$FORCE_TITLE" \
+          --body "Automated force commit to trigger release-please for this release." \
+          --base "$BRANCH" \
           --head "$FORCE_BRANCH")
         PR_NUMBER=$(echo "$PR_URL" | grep -o '[0-9]\+$')
         echo "FORCE_COMMIT_PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
@@ -156,7 +176,7 @@ runs:
         GH_TOKEN: ${{ inputs.github_token }}
 
     - name: Approve and merge force commit PR
-      if: ${{ inputs.branch == 'main' }}
+      if: ${{ inputs.branch == 'main' || inputs.force_release == 'true' }}
       shell: bash
       run: |
         PR_NUMBER="$FORCE_COMMIT_PR_NUMBER"
@@ -168,8 +188,8 @@ runs:
         #
         # UNSTABLE is accepted alongside CLEAN because this PR is opened by
         # GITHUB_TOKEN, so the workflow runs it triggers are parked as
-        # action_required and never execute. The main branch has no required
-        # status checks, so that must not block the merge.
+        # action_required and never execute. The main and next branches have no
+        # required status checks, so that must not block the merge.
         for i in {1..60}; do
           MERGE_STATE=$(gh pr view "$PR_NUMBER" \
             --repo "${{ github.repository }}" \
@@ -190,7 +210,7 @@ runs:
           sleep 10
         done
 
-        git pull origin main
+        git pull origin "${{ inputs.branch }}"
       env:
         GH_TOKEN: ${{ inputs.release_token }}
 
@@ -238,6 +258,24 @@ runs:
           echo "::error::release-please did not create a PR. Either there are no releasable commits since the last release, or a stale 'autorelease: pending' PR is blocking a new one. Check for open PRs labelled 'autorelease: pending' on the ${{ inputs.branch }} branch."
           exit 1
         fi
+
+    # Release-please updates package.json versions but does not regenerate the
+    # pnpm lockfile. Update the generated release PR before approval.
+    - name: Update release PR lockfile
+      if: ${{ steps.release-please.outputs.pr_number != '' }}
+      shell: bash
+      run: |
+        gh pr checkout ${{ steps.release-please.outputs.pr_number }} --force
+        pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts
+        if git diff --quiet -- pnpm-lock.yaml; then
+          echo "pnpm-lock.yaml is already up to date"
+        else
+          git add pnpm-lock.yaml
+          git commit -m "chore: update pnpm lockfile for release versions [skip ci]"
+          git push origin HEAD
+        fi
+      env:
+        GH_TOKEN: ${{ inputs.release_token }}
 
     # Approval must come from a second identity because the PR author cannot self-approve.
     # If the approval token is rate-limited, continue and let the reviewer approve manually.
