@@ -8,7 +8,7 @@ import {
 	type IHealthProviderComponent
 } from "@3sixty/api-models";
 import { ContextIdKeys, ContextIdStore, type IContextIds } from "@3sixty/context";
-import { BaseError, GeneralError, Guards, Is, RandomHelper } from "@3sixty/core";
+import { BaseError, DurationConstants, GeneralError, Guards, Is, RandomHelper } from "@3sixty/core";
 import { AccountHelper } from "@3sixty/dlt-account";
 import { Iota } from "@3sixty/dlt-iota";
 import { nameof } from "@3sixty/nameof";
@@ -288,7 +288,7 @@ export class IotaWalletConnector implements IWalletConnector, IHealthProviderCom
 				}
 				currentBalance += addedBalance;
 				if (currentBalance < ensureBalance) {
-					await new Promise(resolve => setTimeout(resolve, 1000));
+					await new Promise(resolve => setTimeout(resolve, DurationConstants.MsPerSecond));
 					retryCount--;
 				}
 			}
