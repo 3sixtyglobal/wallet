@@ -6,5 +6,4 @@ import type { IWalletConnector } from "../models/IWalletConnector.js";
 /**
  * Factory for creating wallet connectors.
  */
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const WalletConnectorFactory = Factory.createFactory<IWalletConnector>("wallet-connector");

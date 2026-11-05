@@ -126,7 +126,9 @@ export class EntityStorageWalletConnector implements IWalletConnector, IHealthPr
 			// We create a temporary identity and store a mnemonic for it in the vault to
 			// for the identity create to have a known controller
 			await AccountHelper.createAccountKeys(undefined, this._vaultConnector, tempId);
-		} catch {}
+		} catch {
+			// The keys may already exist from a previous start.
+		}
 		contextIds[ContextIdKeys.Organization] = tempId;
 	}
 
